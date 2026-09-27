@@ -1,0 +1,60 @@
+//@version=5
+// PhiCube - MIMAs + PVPC + MIMASAR com as formulas descobertas por engenharia reversa
+// (ver README do repositorio). Codigo aberto, sem relacao com os scripts oficiais.
+//
+// MIMA(n) = 2*EMA(close, E) - EMA(close, L) ; L = floor(n*4.236) ; E = round(2n(1+phi^-6)) - 1
+// PVPC    : PC = min + 21,4% ; PV = min + 78,6% do range das janelas 72 / 305 / 1292
+// MIMASAR : suporte n = MIMA a > MIMA b > MIMA n e high > MIMA n ; resistencia = espelho com low <= MIMA n
+indicator("PhiCube MIMA + PVPC + MIMASAR (formulas abertas)", overlay = true, max_bars_back = 5000)
+
+verMimas = input.bool(true, "Mostrar MIMAs")
+verPvpc  = input.bool(true, "Mostrar PVPC")
+verSar   = input.bool(true, "Mostrar MIMASAR")
+
+// ta.ema ja semeia com a media simples dos P primeiros valores (padrao do oficial)
+mima(simple int L, simple int E) => 2 * ta.ema(close, E) - ta.ema(close, L)
+
+m4   = mima(16, 8)        // MIMA 4: excecao, E = 8
+m8   = mima(33, 16)
+m17  = mima(72, 35)
+m34  = mima(144, 71)
+m72  = mima(304, 151)
+m144 = mima(609, 303)
+m305 = mima(1291, 643)
+m610 = mima(2583, 1287)
+
+cM17 = color.purple, cM34 = color.new(#00BFFF, 0), cM72 = color.new(#FF8C00, 0)
+cM144 = color.yellow, cM305 = color.new(#4169E1, 0), cM610 = color.gray
+
+plot(verMimas ? m17  : na, "MIMA 17",  cM17,  1)
+plot(verMimas ? m34  : na, "MIMA 34",  cM34,  1)
+plot(verMimas ? m72  : na, "MIMA 72",  cM72,  2)
+plot(verMimas ? m144 : na, "MIMA 144", cM144, 2)
+plot(verMimas ? m305 : na, "MIMA 305", cM305, 3)
+plot(verMimas ? m610 : na, "MIMA 610", cM610, 3)
+
+// PVPC
+pc(n) => ta.lowest(low, n) + 0.214 * (ta.highest(high, n) - ta.lowest(low, n))
+pv(n) => ta.lowest(low, n) + 0.786 * (ta.highest(high, n) - ta.lowest(low, n))
+plot(verPvpc ? pc(72)   : na, "PC1 (72)",   color.red,  1)
+plot(verPvpc ? pc(305)  : na, "PC2 (305)",  color.red,  2)
+plot(verPvpc ? pc(1292) : na, "PC3 (1292)", color.red,  3)
+plot(verPvpc ? pv(72)   : na, "PV1 (72)",   color.lime, 1)
+plot(verPvpc ? pv(305)  : na, "PV2 (305)",  color.lime, 2)
+plot(verPvpc ? pv(1292) : na, "PV3 (1292)", color.lime, 3)
+
+// MIMASAR (valor da linha = a propria MIMA n)
+sup(a, b, n) => a > b and b > n and high > n
+res(a, b, n) => a < b and b < n and low <= n
+plot(verSar and sup(m4,   m8,   m17)  ? m17  : na, "Suporte 17",      cM17,  3, plot.style_linebr)
+plot(verSar and sup(m8,   m17,  m34)  ? m34  : na, "Suporte 34",      cM34,  3, plot.style_linebr)
+plot(verSar and sup(m17,  m34,  m72)  ? m72  : na, "Suporte 72",      cM72,  4, plot.style_linebr)
+plot(verSar and sup(m34,  m72,  m144) ? m144 : na, "Suporte 144",     cM144, 4, plot.style_linebr)
+plot(verSar and sup(m72,  m144, m305) ? m305 : na, "Suporte 305",     cM305, 5, plot.style_linebr)
+plot(verSar and sup(m144, m305, m610) ? m610 : na, "Suporte 610",     cM610, 5, plot.style_linebr)
+plot(verSar and res(m4,   m8,   m17)  ? m17  : na, "Resistencia 17",  cM17,  3, plot.style_linebr)
+plot(verSar and res(m8,   m17,  m34)  ? m34  : na, "Resistencia 34",  cM34,  3, plot.style_linebr)
+plot(verSar and res(m17,  m34,  m72)  ? m72  : na, "Resistencia 72",  cM72,  4, plot.style_linebr)
+plot(verSar and res(m34,  m72,  m144) ? m144 : na, "Resistencia 144", cM144, 4, plot.style_linebr)
+plot(verSar and res(m72,  m144, m305) ? m305 : na, "Resistencia 305", cM305, 5, plot.style_linebr)
+plot(verSar and res(m144, m305, m610) ? m610 : na, "Resistencia 610", cM610, 5, plot.style_linebr)
